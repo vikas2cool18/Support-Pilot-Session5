@@ -19,7 +19,7 @@ class GroundedAssistantTest {
     private final SimpleVectorStore store = RagFixtures.store();
 
     private RagPipelineFactory pipeline(FakeChatModel helper) {
-        return RagFixtures.factory(this.store, "v1", helper);
+        return RagFixtures.factory(this.store, "v1", helper, query -> List.<Document>of());
     }
 
     private static GroundedAnswer ask(GroundedAssistant assistant, String question, RagOptions options) {

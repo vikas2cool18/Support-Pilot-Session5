@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
@@ -36,6 +37,7 @@ final class RagFixtures {
     static RagSettings settings() {
         // rewrite, expansions, hybrid, rerank, topN, candidates, [rrfK], [minRelevance], similarityThreshold
         return new RagSettings(false, 0, false, false, 1, 20,
+                60,
                 0.0);
     }
 
@@ -44,9 +46,10 @@ final class RagFixtures {
                 new ClassPathResource("prompts/rag-empty-context.st"));
     }
 
-    static RagPipelineFactory factory(SimpleVectorStore store, String promptVersion, FakeChatModel helper) {
+    static RagPipelineFactory factory(SimpleVectorStore store, String promptVersion, FakeChatModel helper,
+                                      DocumentRetriever keyword) {
         return new RagPipelineFactory(store, settings(), prompts(promptVersion),
-                new RagHelperModel(ChatClient.builder(helper), ""));
+                new RagHelperModel(ChatClient.builder(helper), ""), keyword);
     }
 
     static GroundedAssistant assistant(FakeChatModel model, RagPipelineFactory factory) {

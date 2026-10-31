@@ -106,7 +106,10 @@ supportpilot:
     helper-model: ${RAG_HELPER_MODEL:}
     rewrite: true
     expansions: 2
-    hybrid: false
+    # Checkpoint D: hybrid search (PostgreSQL full-text + pgvector, fused with RRF)
+    hybrid: true
+    rrf-k: 60
+    text-search-config: english
     rerank: false
 
 ---

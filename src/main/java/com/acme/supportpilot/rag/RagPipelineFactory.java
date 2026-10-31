@@ -19,6 +19,7 @@ import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQuery
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.Ordered;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,8 @@ public class RagPipelineFactory {
 
     private final QueryTransformer rewriter;
 
+    private final DocumentRetriever keywordRetriever;
+
     /**
      * The advisor is built per request, so it must not create its own thread pool each time:
      * all pipelines share one executor (virtual threads, Java 21).
@@ -57,7 +60,8 @@ public class RagPipelineFactory {
     private final SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("rag-");
 
     public RagPipelineFactory(VectorStore vectorStore, RagSettings settings, RagPrompts prompts,
-                              RagHelperModel helper) {
+                              RagHelperModel helper,
+                              @Qualifier("keywordRetriever") DocumentRetriever keywordRetriever) {
         this.vectorStore = vectorStore;
         this.settings = settings;
         this.augmenter = ContextualQueryAugmenter.builder()
@@ -71,6 +75,7 @@ public class RagPipelineFactory {
                 .chatClientBuilder(helper.builder())
                 .targetSearchSystem("knowledge base of Acme Cloud product documentation")
                 .build();
+        this.keywordRetriever = keywordRetriever;
         this.executor.setVirtualThreads(true);
     }
 
@@ -95,6 +100,8 @@ public class RagPipelineFactory {
                     .includeOriginal(true)
                     .build()));
         }
+        // Join the variants' results by rank, not by raw score (Checkpoint D)
+        builder.documentJoiner(new RrfDocumentJoiner(this.settings.rrfK()));
 
         // Post-retrieval
         List<DocumentPostProcessor> post = new ArrayList<>();
@@ -108,6 +115,10 @@ public class RagPipelineFactory {
                 .topK(depth)
                 .similarityThreshold(this.settings.similarityThreshold())
                 .build();
+        if (options.hybrid()) {
+            return Traced.retriever("hybrid", new HybridDocumentRetriever(Traced.retriever("vector", vector),
+                    Traced.retriever("keyword", this.keywordRetriever), this.settings.rrfK(), depth));
+        }
         return Traced.retriever("vector", vector);
     }
 

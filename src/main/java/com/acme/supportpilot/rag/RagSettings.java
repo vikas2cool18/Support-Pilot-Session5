@@ -13,16 +13,20 @@ public class RagSettings {
 
     private final double similarityThreshold;
 
+    private final int rrfK;
+
     public RagSettings(@Value("${supportpilot.rag.rewrite:false}") boolean rewrite,
                        @Value("${supportpilot.rag.expansions:0}") int expansions,
                        @Value("${supportpilot.rag.hybrid:false}") boolean hybrid,
                        @Value("${supportpilot.rag.rerank:false}") boolean rerank,
                        @Value("${supportpilot.rag.top-n:5}") int topN,
                        @Value("${supportpilot.rag.candidates:20}") int candidates,
+                       @Value("${supportpilot.rag.rrf-k:60}") int rrfK,
                        @Value("${supportpilot.knowledge.similarity-threshold:0.3}") double similarityThreshold) {
         this.defaults = new RagOptions(rewrite, expansions, hybrid, rerank, topN);
         this.candidates = candidates;
         this.similarityThreshold = similarityThreshold;
+        this.rrfK = rrfK;
     }
 
     /** The switches used when a request does not override them. */
@@ -38,6 +42,11 @@ public class RagSettings {
     /** Minimum cosine similarity for the vector search (model-specific, see Session 3). */
     public double similarityThreshold() {
         return this.similarityThreshold;
+    }
+
+    /** The k constant of Reciprocal Rank Fusion; 60 is the value from the original paper. */
+    public int rrfK() {
+        return this.rrfK;
     }
 
 }
