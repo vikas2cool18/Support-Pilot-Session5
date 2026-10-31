@@ -114,6 +114,10 @@ supportpilot:
     rerank: true
     min-relevance: 3
     native-structured-output: true
+  rag-compare:
+    questions: data/rag-questions.csv,data/hard-questions.csv
+    ingest: false             # true = re-ingest the knowledge base first
+    answers: false            # true = also generate full answers with the complete pipeline
 
 ---
 spring:
@@ -168,5 +172,14 @@ spring:
   config:
     activate:
       on-profile: rag-eval
+  main:
+    web-application-type: none
+
+---
+# Session 4: compare pipeline configurations, e.g. --spring.profiles.active=local,rag-compare
+spring:
+  config:
+    activate:
+      on-profile: rag-compare
   main:
     web-application-type: none

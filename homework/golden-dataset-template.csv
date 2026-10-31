@@ -1,0 +1,4 @@
+id,type,question,expected_answer,expected_sources,notes
+G01,simple,How long do PRO customers have to ask for a refund?,Within 30 days of the first payment (monthly) or of the annual payment (annual).,refund-policy.pdf,
+G02,multi-hop,We have 40 users. Which plan do we need and what refund terms apply?,ENTERPRISE (PRO allows up to 25 users); refunds follow the signed order form.,plans-and-pricing.pdf|refund-policy.pdf,Needs two documents
+G03,unanswerable,How much does the on-premise edition cost?,Not in the knowledge base - the assistant should say it doesn't know.,none,There is no on-premise edition in the docs
