@@ -47,6 +47,14 @@ public class GroundedAssistant {
     }
 
     public GroundedAnswer answer(String question, RagOptions options, KnowledgeFilter filter) {
+        return run(question, options, filter).answer();
+    }
+
+    /**
+     * Session 5: the answer together with the exact chunks the model saw. An evaluator needs both -
+     * faithfulness can only be judged against the context the answer was generated from.
+     */
+    public RagRun run(String question, RagOptions options, KnowledgeFilter filter) {
         long start = System.nanoTime();
         RagTrace trace = new RagTrace();
         Map<String, Object> context = new HashMap<>();
@@ -79,11 +87,12 @@ public class GroundedAssistant {
         Usage usage = (response != null) ? response.getMetadata().getUsage() : null;
         trace.record("generate", trace.lastEndNanos(), (usage != null)
                 ? usage.getPromptTokens() + " prompt + " + usage.getCompletionTokens() + " completion tokens" : "");
-        return new GroundedAnswer(answer, answerable, citations, used.stream().map(SearchHit::from).toList(),
-                trace.stages(),
+        GroundedAnswer grounded = new GroundedAnswer(answer, answerable, citations,
+                used.stream().map(SearchHit::from).toList(), trace.stages(),
                 (usage != null) ? usage.getPromptTokens() : null,
                 (usage != null) ? usage.getCompletionTokens() : null,
                 (System.nanoTime() - start) / 1_000_000);
+        return new RagRun(grounded, used);
     }
 
     /** Retrieval only - shows which chunks would reach the prompt, without generating an answer. */
