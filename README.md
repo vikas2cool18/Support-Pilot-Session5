@@ -1,4 +1,4 @@
-# SupportPilot — Sessions 1–3
+# SupportPilot — Sessions 1–4
 
 Code for *AI Engineering for Java Developers*.
 
@@ -127,6 +127,40 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-eval -Dspring-boot.run.
 mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-eval -Dspring-boot.run.arguments="--supportpilot.knowledge.chunking=window --supportpilot.knowledge.chunk-size=512 --supportpilot.knowledge.overlap=128"
 ```
 
+## 4d. Session 4 endpoints and tags
+
+Session 4 keeps `/ask` (Session 3, naive RAG) as the baseline and adds a modular pipeline behind two new endpoints.
+Every stage can be switched per request, so you can see what each technique adds.
+
+| Endpoint | What it does |
+|---|---|
+| `GET /answer?q=` | Full pipeline: answer, `answerable`, citations (verified from E), sources, stage-by-stage `trace` |
+| `GET /retrieve?q=` | Retrieval only — which chunks would reach the prompt, and how they got there (no answer generated) |
+| Switches (both) | `rewrite=true/false`, `expansions=0..5`, `hybrid=true/false`, `rerank=true/false` |
+| Filters (from C) | `docType` = policy, faq, guide, reference, pricing, release-notes; `area` = billing, platform, security, api |
+| `rag-compare` profile | Runs all questions through naive → +rewrite → +expand → +hybrid → +rerank and prints hit@5, MRR, latency |
+
+```bash
+curl "localhost:8080/retrieve?q=ERR-4471&hybrid=false&rewrite=false&expansions=0"   # vector only
+curl "localhost:8080/retrieve?q=ERR-4471&hybrid=true&rewrite=false&expansions=0"    # + keyword leg
+curl "localhost:8080/answer?q=How+much+does+the+on-premise+edition+cost"            # honest "I don't know"
+mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-compare
+mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-compare -Dspring-boot.run.arguments="--supportpilot.rag-compare.answers=true"
+```
+
+| Tag | State |
+|---|---|
+| `s04-start` | Session 3 code + `data/hard-questions.csv` (six hard questions) + Session 4 requests |
+| `s04-cpA` | `spring-ai-rag`: `RetrievalAugmentationAdvisor`, numbered sources, `[n]` citations, trace, `/answer`, `/retrieve` |
+| `s04-cpB` | Query rewriting (`RewriteQueryTransformer`) and multi-query expansion (`MultiQueryExpander`) with a helper model |
+| `s04-cpC` | Metadata filters (`KnowledgeFilter` → `FILTER_EXPRESSION`), validated input |
+| `s04-cpD` | Hybrid search: PostgreSQL full-text + pgvector, Reciprocal Rank Fusion, GIN index |
+| `s04-cpE` | LLM re-ranker, structured `AnswerWithCitations`, quote verification, honest "I don't know" |
+| `s04-end` | `rag-compare` runner, golden-dataset template for the homework, more tests |
+
+Latency: rewriting, expansion and re-ranking are extra model calls. Point them at a smaller model with
+`RAG_HELPER_MODEL` (e.g. `gpt-4.1-nano` with OpenAI, `claude-haiku-4-5` with Anthropic, or a small Ollama model).
+
 ## 5. Tests (no API key, Ollama or database needed)
 
 ```bash
@@ -161,6 +195,10 @@ Add your 1–5 quality score in the last column, then summarise the three models
 | Triage always returns `fallback: true` | Read the WARN log line from `TriageService`; try `supportpilot.triage.native-structured-output=false` for models without native JSON support. |
 | `expected 768 dimensions, not 1536` (or similar) | The table was created by another embedding model. Each profile uses its own table; if you changed models, drop the table or set `spring.ai.vectorstore.pgvector.remove-existing-vector-store-table=true` once. |
 | `/ask` says it can't answer | Run `POST /admin/ingest` first, and check `/search` returns the right chunks; lower `supportpilot.knowledge.similarity-threshold` for your embedding model. |
+| `/answer` is slow | Each switch adds a model call. Set `RAG_HELPER_MODEL` to a small model, use `expansions=1`, or turn stages off per request. |
+| `/answer` returns `answerable: false` for a question the docs cover | Check `/retrieve` with `rerank=false`: if the chunk is there, the re-ranker dropped it — lower `supportpilot.rag.min-relevance`. |
+| Keyword search finds nothing | Re-ingest after upgrading (`POST /admin/ingest`); check the log line "Full-text index ready". Very common words alone don't match. |
+| Citations marked unverified | The model paraphrased its quote. Try a stronger chat model or keep `native-structured-output: true`. |
 | Port 8080 in use | `mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` |
 
 ## Optional: Maven wrapper

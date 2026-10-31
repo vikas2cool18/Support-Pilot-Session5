@@ -85,3 +85,57 @@ GET http://localhost:8080/ask?q=How long do PRO customers have to ask for a refu
 
 ### Checkpoint E - a question the documents cannot answer
 GET http://localhost:8080/ask?q=What is the CEO's favourite cricket team?
+
+### ===================== Session 4 =====================
+### The five hard questions (data/hard-questions.csv). Run them with /ask first and keep the answers.
+
+### H1 - noisy, conversational
+GET http://localhost:8080/ask?q=hi team - since tuesday our nightly sync with your API keeps dying around 2am. nothing changed on our side!! pls help
+
+### H2 - an exact code
+GET http://localhost:8080/ask?q=ERR-4471
+
+### H3 - two questions in one
+GET http://localhost:8080/ask?q=We are 40 people - which plan do we need and could we get our money back if it does not work out?
+
+### H4 - different words than the documents
+GET http://localhost:8080/ask?q=Can I get my money back after paying for a whole year?
+
+### H5 - vague
+GET http://localhost:8080/ask?q=what got fixed in the latest release
+
+### H6 - not in the knowledge base
+GET http://localhost:8080/ask?q=How much does the on-premise edition of Acme Cloud cost?
+
+### Checkpoint A - the new pipeline: numbered sources, citations and a trace
+GET http://localhost:8080/answer?q=Can I get my money back after paying for a whole year?
+
+### Checkpoint A - retrieval only (no answer generated)
+GET http://localhost:8080/retrieve?q=Can I get my money back after paying for a whole year?
+
+### Checkpoint B - with and without query rewriting
+GET http://localhost:8080/retrieve?q=hi team - since tuesday our nightly sync with your API keeps dying around 2am. nothing changed on our side!! pls help&rewrite=true&expansions=0
+
+### Checkpoint B - multi-query expansion
+GET http://localhost:8080/retrieve?q=Can I get my money back after paying for a whole year?&rewrite=false&expansions=3
+
+### Checkpoint C - only billing documents
+GET http://localhost:8080/answer?q=what can I get back if I cancel?&area=billing
+
+### Checkpoint C - an invalid filter value is rejected (400)
+GET http://localhost:8080/answer?q=refund&docType=policy' || 'x
+
+### Checkpoint D - hybrid search finds the exact code
+GET http://localhost:8080/retrieve?q=ERR-4471&hybrid=true&rewrite=false&expansions=0
+
+### Checkpoint D - the same without the keyword leg
+GET http://localhost:8080/retrieve?q=ERR-4471&hybrid=false&rewrite=false&expansions=0
+
+### Checkpoint E - the full pipeline with verified citations
+GET http://localhost:8080/answer?q=We are 40 people - which plan do we need and could we get our money back if it does not work out?
+
+### Checkpoint E - an honest "I don't know"
+GET http://localhost:8080/answer?q=How much does the on-premise edition of Acme Cloud cost?
+
+### Checkpoint E - the same without re-ranking: does it still refuse?
+GET http://localhost:8080/answer?q=How much does the on-premise edition of Acme Cloud cost?&rerank=false

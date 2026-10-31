@@ -1,0 +1,7 @@
+id,question,expected_source,expected_keyword
+H1,hi team - since tuesday our nightly sync with your API keeps dying around 2am. nothing changed on our side!! pls help,api-error-codes.md,expired
+H2,ERR-4471,api-error-codes.md,expired
+H3,We are 40 people - which plan do we need and could we get our money back if it does not work out?,plans-and-pricing.pdf|refund-policy.pdf,ENTERPRISE
+H4,Can I get my money back after paying for a whole year?,refund-policy.pdf,30 days
+H5,what got fixed in the latest release,release-notes.md,Firefox
+H6,How much does the on-premise edition of Acme Cloud cost?,none,-
