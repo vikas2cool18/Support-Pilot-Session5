@@ -85,11 +85,13 @@ supportpilot:
   # Session 2, Checkpoint E: labelled tickets for the accuracy runner
   accuracy:
     dataset: data/tickets-labelled.csv
-  # Session 3: knowledge base and chunking settings
+  # Session 3: knowledge base, chunking and retrieval settings
   knowledge:
     dir: kb
     catalog: kb/catalog.csv
     chunk-size: 512           # tokens per chunk
+    top-k: 5                  # chunks given to the model per question
+    similarity-threshold: 0.3 # minimum cosine similarity; depends on the embedding model!
 
 ---
 spring:
