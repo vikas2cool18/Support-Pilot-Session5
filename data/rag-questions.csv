@@ -1,0 +1,11 @@
+id,question,expected_source,expected_keyword
+Q01,How long do PRO customers have to ask for a refund?,refund-policy.pdf,30 days
+Q02,Where is data stored for customers in India?,security-and-data-residency.md,Mumbai
+Q03,What does error ERR-4471 mean?,api-error-codes.md,expired
+Q04,How many users can a PRO account have?,plans-and-pricing.pdf,25
+Q05,How do I export my contacts to a CSV file?,acme-cloud-user-guide.md|faq.md,Export
+Q06,Which version added dark mode to the mobile app?,release-notes.md,3.3
+Q07,How do I turn on two-factor authentication?,acme-cloud-user-guide.md,Authenticator
+Q08,The dashboard shows Error 503. What should I do?,troubleshooting-guide.docx,status
+Q09,My GST number is wrong on an invoice. Can you fix it?,refund-policy.pdf|faq.md,GSTIN
+Q10,Does Acme Cloud integrate with Tally?,faq.md,roadmap

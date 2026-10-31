@@ -59,3 +59,29 @@ GET http://localhost:8080/conversations/PASTE-ID-HERE/messages
 
 ### Checkpoint D - forget the conversation
 DELETE http://localhost:8080/conversations/PASTE-ID-HERE
+
+### ===================== Session 3 =====================
+
+### Checkpoint B - what an embedding looks like
+GET http://localhost:8080/embeddings?text=How do I reset my password?
+
+### Checkpoint B - similarity between meanings
+GET http://localhost:8080/embeddings/similarity?text=I can't log in&text=reset my password&text=download my invoice
+
+### Checkpoint C - ingest the whole knowledge base
+POST http://localhost:8080/admin/ingest
+
+### Checkpoint C - re-ingest one file (idempotent)
+POST http://localhost:8080/admin/ingest/refund-policy.pdf
+
+### Checkpoint D - semantic search
+GET http://localhost:8080/search?q=refund for an annual plan&k=5
+
+### Checkpoint D - search only policy documents
+GET http://localhost:8080/search?q=where is my data stored&k=5&docType=policy
+
+### Checkpoint E - answer from the knowledge base
+GET http://localhost:8080/ask?q=How long do PRO customers have to ask for a refund?
+
+### Checkpoint E - a question the documents cannot answer
+GET http://localhost:8080/ask?q=What is the CEO's favourite cricket team?

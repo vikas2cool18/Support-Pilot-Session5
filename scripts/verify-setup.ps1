@@ -6,7 +6,7 @@ function Ok($m)   { Write-Host "  [OK]   $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "  [WARN] $m" -ForegroundColor Yellow; $script:warn++ }
 function Bad($m)  { Write-Host "  [FAIL] $m" -ForegroundColor Red; $script:fail++ }
 
-Write-Host "SupportPilot - Session 1 setup check"
+Write-Host "SupportPilot - setup check (Sessions 1-3)"
 
 try {
   $javaOut = (& java -version 2>&1 | Select-Object -First 1).ToString()
@@ -24,6 +24,7 @@ try {
   $tags = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -TimeoutSec 3
   Ok "Ollama is running on :11434"
   if ($tags.models.name -match "^$model") { Ok "Model '$model' is pulled" } else { Warn "Model '$model' not pulled - run: ollama pull $model" }
+  if ($tags.models.name -match "^nomic-embed-text") { Ok "Embedding model 'nomic-embed-text' is pulled (Session 3)" } else { Warn "Embedding model not pulled - run: ollama pull nomic-embed-text (Session 3)" }
 } catch { Warn "Ollama not reachable on :11434 - install it and run: ollama serve" }
 
 if ($env:OPENAI_API_KEY -or $env:ANTHROPIC_API_KEY) { Ok "A cloud API key is set" }

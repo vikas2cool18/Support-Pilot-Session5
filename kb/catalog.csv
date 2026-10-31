@@ -1,0 +1,9 @@
+file,doc_type,product_area,version,title
+acme-cloud-user-guide.md,guide,platform,3.4,Acme Cloud User Guide
+faq.md,faq,platform,3.4,Frequently Asked Questions
+release-notes.md,release-notes,platform,3.4,Release Notes
+security-and-data-residency.md,policy,security,3.4,Security and Data Residency
+api-error-codes.md,reference,api,3.4,API v2 Error Codes
+refund-policy.pdf,policy,billing,3.4,Refund and Billing Policy
+plans-and-pricing.pdf,pricing,billing,3.4,Plans and Pricing
+troubleshooting-guide.docx,guide,platform,3.4,Troubleshooting Guide

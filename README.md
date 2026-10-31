@@ -1,9 +1,10 @@
-# SupportPilot — Sessions 1–2
+# SupportPilot — Sessions 1–3
 
 Code for *AI Engineering for Java Developers*.
 
 - **Session 1 (v0.1):** answers support questions, reports tokens and latency, streams to the browser, switches cloud ↔ local models with no code change.
 - **Session 2 (v0.2):** triages tickets into a validated Java record using versioned prompt files, falls back safely on bad output, holds multi-turn conversations with memory stored in PostgreSQL, and measures triage accuracy on labelled tickets.
+- **Session 3 (v0.3):** turns text into embeddings, ingests the Acme Cloud knowledge base (`kb/`: Markdown, PDF and Word files) into pgvector with an idempotent pipeline, offers semantic search, and answers questions from the documents with naive RAG.
 
 | | |
 |---|---|
@@ -96,6 +97,36 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local,accuracy
 mvn spring-boot:run -Dspring-boot.run.profiles=local,accuracy -Dspring-boot.run.arguments=--supportpilot.triage.prompt-version=v2
 ```
 
+## 4c. Session 3 endpoints and tags
+
+Pull the local embedding model once: `ollama pull nomic-embed-text` (the app also pulls it on first start).
+
+| Checkpoint | Endpoint | Try it |
+|---|---|---|
+| B | `GET /embeddings?text=` | `curl "localhost:8080/embeddings?text=reset+my+password"` |
+| B | `GET /embeddings/similarity?text=..&text=..` | `curl "localhost:8080/embeddings/similarity?text=I+cant+log+in&text=reset+my+password&text=download+my+invoice"` |
+| C | `POST /admin/ingest` | `curl -X POST localhost:8080/admin/ingest` |
+| D | `GET /search?q=&k=&threshold=&docType=` | `curl "localhost:8080/search?q=refund+for+annual+plan&k=5"` |
+| E | `GET /ask?q=` | `curl "localhost:8080/ask?q=How+long+do+PRO+customers+have+to+ask+for+a+refund"` |
+| Homework | `rag-eval` profile | `mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-eval` |
+
+| Tag | State |
+|---|---|
+| `s03-start` | Session 2 code + knowledge base in `kb/` + `data/rag-questions.csv` |
+| `s03-cpA` | pgvector starter, embedding models per profile, one table per embedding model |
+| `s03-cpB` | Embeddings playground (`/embeddings`, `/embeddings/similarity`) |
+| `s03-cpC` | ETL: catalog, readers (PDF, Markdown, Tika), context headers, token chunking, idempotent load |
+| `s03-cpD` | Semantic search with scores and metadata filter (`/search`) |
+| `s03-cpE` | Naive RAG with `QuestionAnswerAdvisor` (`/ask`) + "Ask the knowledge base" button |
+| `s03-end` | Overlapping `SlidingWindowSplitter`, `rag-eval` runner, offline tests |
+
+Chunking experiments without code changes:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-eval -Dspring-boot.run.arguments="--supportpilot.knowledge.chunk-size=256"
+mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-eval -Dspring-boot.run.arguments="--supportpilot.knowledge.chunking=window --supportpilot.knowledge.chunk-size=512 --supportpilot.knowledge.overlap=128"
+```
+
 ## 5. Tests (no API key, Ollama or database needed)
 
 ```bash
@@ -128,6 +159,8 @@ Add your 1–5 quality score in the last column, then summarise the three models
 | Very slow first local answer | The model is loading into memory; later calls are faster. Try a smaller model. |
 | `Connection to localhost:5432 refused` at startup | PostgreSQL is not running: `docker compose up -d`. From Session 2 the app needs it to start. |
 | Triage always returns `fallback: true` | Read the WARN log line from `TriageService`; try `supportpilot.triage.native-structured-output=false` for models without native JSON support. |
+| `expected 768 dimensions, not 1536` (or similar) | The table was created by another embedding model. Each profile uses its own table; if you changed models, drop the table or set `spring.ai.vectorstore.pgvector.remove-existing-vector-store-table=true` once. |
+| `/ask` says it can't answer | Run `POST /admin/ingest` first, and check `/search` returns the right chunks; lower `supportpilot.knowledge.similarity-threshold` for your embedding model. |
 | Port 8080 in use | `mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` |
 
 ## Optional: Maven wrapper

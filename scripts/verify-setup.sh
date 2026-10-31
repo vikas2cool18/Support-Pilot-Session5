@@ -7,7 +7,7 @@ ok()   { printf "  \033[32m[OK]\033[0m   %s\n" "$1"; pass=$((pass+1)); }
 wn()   { printf "  \033[33m[WARN]\033[0m %s\n" "$1"; warn=$((warn+1)); }
 bad()  { printf "  \033[31m[FAIL]\033[0m %s\n" "$1"; fail=$((fail+1)); }
 
-echo "SupportPilot - Session 1 setup check"
+echo "SupportPilot - setup check (Sessions 1-3)"
 
 # Java 21+
 if command -v java >/dev/null 2>&1; then
@@ -31,6 +31,8 @@ if curl -s --max-time 3 http://localhost:11434/api/tags >/dev/null 2>&1; then
   ok "Ollama is running on :11434"
   if curl -s http://localhost:11434/api/tags | grep -q "\"$MODEL"; then ok "Model '$MODEL' is pulled"
   else wn "Model '$MODEL' not pulled yet - run: ollama pull $MODEL"; fi
+  if curl -s http://localhost:11434/api/tags | grep -q "\"nomic-embed-text"; then ok "Embedding model 'nomic-embed-text' is pulled (Session 3)"
+  else wn "Embedding model not pulled - run: ollama pull nomic-embed-text (Session 3)"; fi
 else wn "Ollama not reachable on :11434 - install it and run: ollama serve"; fi
 
 # Cloud keys (at least one, or use Ollama only)
