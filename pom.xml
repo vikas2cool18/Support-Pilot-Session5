@@ -13,9 +13,9 @@
 
     <groupId>com.acme</groupId>
     <artifactId>supportpilot</artifactId>
-    <version>0.4.0</version>
+    <version>0.5.0</version>
     <name>SupportPilot</name>
-    <description>AI Engineering for Java Developers - Sessions 1-4: chat, structured triage, memory and production-grade RAG with Spring AI</description>
+    <description>AI Engineering for Java Developers - Sessions 1-5: chat, structured triage, memory, production-grade RAG and evaluation with Spring AI</description>
 
     <properties>
         <java.version>21</java.version>
