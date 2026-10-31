@@ -25,11 +25,6 @@ final class EvalConfig {
         return (n > 0 && n < all.size()) ? all.subList(0, n) : all;
     }
 
-    /** Checkpoint B: the share of cases that must pass every deterministic check. */
-    static double minPassRate() {
-        return Double.parseDouble(System.getProperty("eval.min-pass-rate", "0.8"));
-    }
-
     /** -Deval.judge=false skips the LLM judge (faster, cheaper, deterministic checks only). */
     static boolean judge() {
         return Boolean.parseBoolean(System.getProperty("eval.judge", "true"));
@@ -43,6 +38,11 @@ final class EvalConfig {
     /** -Deval.spring-evaluators=true also runs Spring AI's RelevancyEvaluator and FactCheckingEvaluator. */
     static boolean springEvaluators() {
         return Boolean.parseBoolean(System.getProperty("eval.spring-evaluators", "false"));
+    }
+
+    /** Where reports are written. */
+    static Path outputDir() {
+        return Path.of(System.getProperty("eval.output", "target/eval"));
     }
 
 }

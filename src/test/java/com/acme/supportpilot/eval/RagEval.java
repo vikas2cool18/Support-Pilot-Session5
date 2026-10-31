@@ -3,7 +3,9 @@ package com.acme.supportpilot.eval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -18,6 +20,7 @@ import org.springframework.ai.chat.evaluation.FactCheckingEvaluator;
 import org.springframework.ai.chat.evaluation.RelevancyEvaluator;
 import org.springframework.ai.evaluation.EvaluationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 
 import com.acme.supportpilot.knowledge.IngestionService;
 import com.acme.supportpilot.rag.GroundedAnswer;
@@ -59,6 +62,9 @@ class RagEval {
 
     @Autowired
     private ChatClient.Builder judgeBuilder;
+
+    @Autowired
+    private Environment env;
 
     private final List<CaseResult> results = Collections.synchronizedList(new ArrayList<>());
 
@@ -109,15 +115,25 @@ class RagEval {
 
     @AfterAll
     void gate() throws IOException {
-        long passed = this.results.stream().filter(CaseResult::passed).count();
-        double passRate = this.results.isEmpty() ? 0 : (double) passed / this.results.size();
-        log.info("\n===== RAG evaluation: {}/{} cases passed every check ({}%) =====\n{}", passed, this.results.size(),
-                Math.round(passRate * 100), String.join("\n", this.results.stream()
-                        .filter(r -> !r.passed())
-                        .map(r -> "  " + r.goldenCase().id() + " failed " + r.checks().stream().filter(x -> !x.passed()).map(Check::name).toList())
-                        .toList()));
-        // The quality gate: fail the build if too few cases pass.
-        assertThat(passRate).as("share of cases passing every deterministic check").isGreaterThanOrEqualTo(EvalConfig.minPassRate());
+        Thresholds thresholds = Thresholds.load();
+        EvalReport report = EvalReport.of(this.results, runConfig());
+        report.write(EvalConfig.outputDir(), thresholds);
+        log.info("\n{}", report.summary(thresholds));
+        // The quality gate: every metric must meet its threshold (src/test/resources/eval/thresholds.properties).
+        assertThat(report.gateFailures(thresholds)).as("quality gate - see target/eval/eval-report.md").isEmpty();
+    }
+
+    /** What was evaluated - so two reports can be compared fairly. */
+    private Map<String, String> runConfig() {
+        Map<String, String> config = new LinkedHashMap<>();
+        String provider = this.env.getProperty("spring.ai.model.chat", "?");
+        config.put("chat model", provider + " / " + this.env.getProperty("spring.ai." + provider + ".chat.model", "?"));
+        config.put("embedding model", this.env.getProperty("spring.ai.model.embedding", "?"));
+        config.put("prompt version", this.env.getProperty("supportpilot.rag.prompt-version", "?"));
+        config.put("pipeline", this.settings.defaults().toString());
+        config.put("judge model", EvalConfig.judge() ? (EvalConfig.judgeModel().isBlank() ? "same as chat" : EvalConfig.judgeModel()) : "off");
+        config.put("dataset", EvalConfig.dataset().getFileName() + " (" + this.results.size() + " cases)");
+        return config;
     }
 
 }
