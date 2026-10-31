@@ -85,6 +85,11 @@ supportpilot:
   # Session 2, Checkpoint E: labelled tickets for the accuracy runner
   accuracy:
     dataset: data/tickets-labelled.csv
+  # Session 3: knowledge base and chunking settings
+  knowledge:
+    dir: kb
+    catalog: kb/catalog.csv
+    chunk-size: 512           # tokens per chunk
 
 ---
 spring:
