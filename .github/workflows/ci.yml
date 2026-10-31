@@ -1,0 +1,66 @@
+# Session 5: SupportPilot CI
+#   unit        every push and pull request: fast, offline tests (no keys, no Docker needed)
+#   containers  every push and pull request: retrieval SQL against PostgreSQL + pgvector (Docker)
+#   eval        pull requests: smoke evaluation (10 cases); nightly: the full golden set.
+#               Needs the repository secret OPENAI_API_KEY; skipped when it is not set.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 20 * * *"      # nightly, 01:47 IST
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: mvn -B test
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: mvn -B -Pdocker test
+
+  eval:
+    needs: unit
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Pin the models the gate was calibrated with. A new model is a change to review, like any other.
+      OPENAI_CHAT_MODEL: gpt-4.1-mini
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-small
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Evaluation suite and quality gate
+        if: env.OPENAI_API_KEY != ''
+        run: |
+          SAMPLE=10
+          if [ "${{ github.event_name }}" != "pull_request" ]; then SAMPLE=0; fi
+          mvn -B -Peval verify -Deval.sample=$SAMPLE -Deval.judge-model=gpt-4.1
+      - name: Upload the evaluation report
+        if: always() && env.OPENAI_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: target/eval/

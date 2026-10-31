@@ -145,7 +145,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <excludedGroups>eval</excludedGroups>
+                    <excludedGroups>eval,docker</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
@@ -164,6 +164,24 @@
                             <groups>eval</groups>
                             <includes>
                                 <include>**/*Eval.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- mvn -Pdocker test : retrieval SQL against a real PostgreSQL in a container (no API keys) -->
+        <profile>
+            <id>docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration combine.self="override">
+                            <groups>docker</groups>
+                            <includes>
+                                <include>**/*IT.java</include>
                             </includes>
                         </configuration>
                     </plugin>
