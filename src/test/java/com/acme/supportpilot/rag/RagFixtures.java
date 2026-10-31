@@ -44,8 +44,9 @@ final class RagFixtures {
                 new ClassPathResource("prompts/rag-empty-context.st"));
     }
 
-    static RagPipelineFactory factory(SimpleVectorStore store, String promptVersion) {
-        return new RagPipelineFactory(store, settings(), prompts(promptVersion));
+    static RagPipelineFactory factory(SimpleVectorStore store, String promptVersion, FakeChatModel helper) {
+        return new RagPipelineFactory(store, settings(), prompts(promptVersion),
+                new RagHelperModel(ChatClient.builder(helper), ""));
     }
 
     static GroundedAssistant assistant(FakeChatModel model, RagPipelineFactory factory) {

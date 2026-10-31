@@ -13,6 +13,9 @@ import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.generation.augmentation.QueryAugmenter;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -43,13 +46,18 @@ public class RagPipelineFactory {
 
     private final QueryAugmenter augmenter;
 
+    private final RagHelperModel helper;
+
+    private final QueryTransformer rewriter;
+
     /**
      * The advisor is built per request, so it must not create its own thread pool each time:
      * all pipelines share one executor (virtual threads, Java 21).
      */
     private final SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("rag-");
 
-    public RagPipelineFactory(VectorStore vectorStore, RagSettings settings, RagPrompts prompts) {
+    public RagPipelineFactory(VectorStore vectorStore, RagSettings settings, RagPrompts prompts,
+                              RagHelperModel helper) {
         this.vectorStore = vectorStore;
         this.settings = settings;
         this.augmenter = ContextualQueryAugmenter.builder()
@@ -57,6 +65,11 @@ public class RagPipelineFactory {
                 .emptyContextPromptTemplate(prompts.emptyContext())
                 .allowEmptyContext(false)                 // no sources -> say "I don't know"
                 .documentFormatter(RagPrompts::numbered)  // [1] source, page ... so answers can cite
+                .build();
+        this.helper = helper;
+        this.rewriter = RewriteQueryTransformer.builder()
+                .chatClientBuilder(helper.builder())
+                .targetSearchSystem("knowledge base of Acme Cloud product documentation")
                 .build();
         this.executor.setVirtualThreads(true);
     }
@@ -70,6 +83,18 @@ public class RagPipelineFactory {
                 .queryAugmenter(this.augmenter)
                 .taskExecutor(this.executor)
                 .order(ORDER);
+
+        // Pre-retrieval (Checkpoint B)
+        if (options.rewrite()) {
+            builder.queryTransformers(Traced.transformer("rewrite", this.rewriter));
+        }
+        if (options.expansions() > 0) {
+            builder.queryExpander(Traced.expander(MultiQueryExpander.builder()
+                    .chatClientBuilder(this.helper.builder())
+                    .numberOfQueries(options.expansions())
+                    .includeOriginal(true)
+                    .build()));
+        }
 
         // Post-retrieval
         List<DocumentPostProcessor> post = new ArrayList<>();

@@ -102,8 +102,10 @@ supportpilot:
     top-n: 5                  # chunks that finally go into the prompt
     candidates: 20            # chunks fetched per search before fusion and re-ranking narrow them down
     prompt-version: v1
-    rewrite: false
-    expansions: 0
+    # Checkpoint B: query transformation. Helper calls use this model (empty = the chat model).
+    helper-model: ${RAG_HELPER_MODEL:}
+    rewrite: true
+    expansions: 2
     hybrid: false
     rerank: false
 

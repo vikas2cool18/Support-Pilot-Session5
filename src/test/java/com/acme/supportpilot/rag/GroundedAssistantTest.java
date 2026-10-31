@@ -19,7 +19,7 @@ class GroundedAssistantTest {
     private final SimpleVectorStore store = RagFixtures.store();
 
     private RagPipelineFactory pipeline(FakeChatModel helper) {
-        return RagFixtures.factory(this.store, "v1");
+        return RagFixtures.factory(this.store, "v1", helper);
     }
 
     private static GroundedAnswer ask(GroundedAssistant assistant, String question, RagOptions options) {
@@ -59,6 +59,25 @@ class GroundedAssistantTest {
 
         assertThat(answer.citations()).extracting(CitedSource::number, CitedSource::verified)
                 .containsExactly(tuple(1, true), tuple(4, false));
+    }
+
+    @Test
+    void rewriteAndExpansionUseTheHelperModelAndAreTraced() {
+        FakeChatModel helper = new FakeChatModel("PRO plan refund period",
+                "refund deadline annual subscription\nmoney back PRO plan");
+        FakeChatModel model = new FakeChatModel(reply("30 days [1]."));
+        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(helper));
+
+        GroundedAnswer answer = ask(assistant, "hey, can i still get my money back??", new RagOptions(true, 2, false, false, 1));
+
+        assertThat(helper.callCount()).isEqualTo(2);           // one rewrite, one expansion
+        assertThat(model.callCount()).isEqualTo(1);            // one answer
+        assertThat(answer.trace()).filteredOn(s -> s.name().equals("rewrite"))
+                .singleElement().satisfies(s -> assertThat(s.detail()).isEqualTo("PRO plan refund period"));
+        assertThat(answer.trace()).filteredOn(s -> s.name().equals("expand"))
+                .singleElement().satisfies(s -> assertThat(s.detail()).contains("money back PRO plan"));
+        // The answer prompt still shows the customer's original question, not the rewrite.
+        assertThat(model.lastPrompt().getUserMessage().getText()).contains("hey, can i still get my money back??");
     }
 
 
