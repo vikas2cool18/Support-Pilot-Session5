@@ -89,9 +89,13 @@ supportpilot:
   knowledge:
     dir: kb
     catalog: kb/catalog.csv
+    chunking: token           # token | window (window = with overlap, see SlidingWindowSplitter)
     chunk-size: 512           # tokens per chunk
+    overlap: 64               # tokens shared by neighbouring chunks (window only)
     top-k: 5                  # chunks given to the model per question
     similarity-threshold: 0.3 # minimum cosine similarity; depends on the embedding model!
+  rag-eval:
+    questions: data/rag-questions.csv
 
 ---
 spring:
@@ -140,3 +144,11 @@ spring:
   main:
     web-application-type: none
 
+---
+# Session 3 homework: re-ingest and evaluate retrieval, e.g. --spring.profiles.active=local,rag-eval
+spring:
+  config:
+    activate:
+      on-profile: rag-eval
+  main:
+    web-application-type: none
