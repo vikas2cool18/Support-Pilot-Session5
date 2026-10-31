@@ -31,8 +31,10 @@ public class RagController {
                                  @RequestParam(required = false) Boolean rewrite,
                                  @RequestParam(required = false) Integer expansions,
                                  @RequestParam(required = false) Boolean hybrid,
-                                 @RequestParam(required = false) Boolean rerank) {
-        return this.assistant.answer(check(q), options(rewrite, expansions, hybrid, rerank));
+                                 @RequestParam(required = false) Boolean rerank,
+                                 @RequestParam(required = false) String docType,
+                                 @RequestParam(required = false) String area) {
+        return this.assistant.answer(check(q), options(rewrite, expansions, hybrid, rerank), filter(docType, area));
     }
 
     @GetMapping("/retrieve")
@@ -40,8 +42,10 @@ public class RagController {
                                     @RequestParam(required = false) Boolean rewrite,
                                     @RequestParam(required = false) Integer expansions,
                                     @RequestParam(required = false) Boolean hybrid,
-                                    @RequestParam(required = false) Boolean rerank) {
-        return this.assistant.retrieve(check(q), options(rewrite, expansions, hybrid, rerank));
+                                    @RequestParam(required = false) Boolean rerank,
+                                    @RequestParam(required = false) String docType,
+                                    @RequestParam(required = false) String area) {
+        return this.assistant.retrieve(check(q), options(rewrite, expansions, hybrid, rerank), filter(docType, area));
     }
 
     private static String check(String q) {
@@ -54,6 +58,15 @@ public class RagController {
     private RagOptions options(Boolean rewrite, Integer expansions, Boolean hybrid, Boolean rerank) {
         try {
             return this.settings.defaults().with(rewrite, expansions, hybrid, rerank);
+        }
+        catch (IllegalArgumentException ex) {
+            throw new InvalidRequestException(ex.getMessage());
+        }
+    }
+
+    private static KnowledgeFilter filter(String docType, String area) {
+        try {
+            return new KnowledgeFilter(docType, area);
         }
         catch (IllegalArgumentException ex) {
             throw new InvalidRequestException(ex.getMessage());

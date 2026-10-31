@@ -23,7 +23,7 @@ class GroundedAssistantTest {
     }
 
     private static GroundedAnswer ask(GroundedAssistant assistant, String question, RagOptions options) {
-        return assistant.answer(question, options);
+        return assistant.answer(question, options, KnowledgeFilter.NONE);
     }
 
     /** The model's reply: plain text until Checkpoint D, a structured answer from Checkpoint E. */
@@ -78,6 +78,17 @@ class GroundedAssistantTest {
                 .singleElement().satisfies(s -> assertThat(s.detail()).contains("money back PRO plan"));
         // The answer prompt still shows the customer's original question, not the rewrite.
         assertThat(model.lastPrompt().getUserMessage().getText()).contains("hey, can i still get my money back??");
+    }
+
+    @Test
+    void metadataFilterRestrictsRetrieval() {
+        FakeChatModel model = new FakeChatModel(reply("Dark mode is in version 3.3 [1]."));
+        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(new FakeChatModel("unused")));
+
+        GroundedAnswer answer = assistant.answer("How long do PRO customers have to ask for a refund?",
+                RagOptions.naive(1), new KnowledgeFilter("release-notes", null));
+
+        assertThat(answer.sources()).extracting(SearchHit::source).containsExactly("release-notes.md");
     }
 
 

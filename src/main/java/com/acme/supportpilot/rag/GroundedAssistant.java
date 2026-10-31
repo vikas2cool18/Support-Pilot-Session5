@@ -36,11 +36,12 @@ public class GroundedAssistant {
         this.pipelines = pipelines;
     }
 
-    public GroundedAnswer answer(String question, RagOptions options) {
+    public GroundedAnswer answer(String question, RagOptions options, KnowledgeFilter filter) {
         long start = System.nanoTime();
         RagTrace trace = new RagTrace();
         Map<String, Object> context = new HashMap<>();
         context.put(RagTrace.KEY, trace);   // every pipeline stage records itself here
+        filter.putInto(context);
 
         ChatClient.CallResponseSpec call = this.chat.prompt()
                 .user(question)
@@ -67,11 +68,12 @@ public class GroundedAssistant {
     }
 
     /** Retrieval only - shows which chunks would reach the prompt, without generating an answer. */
-    public RetrievalResult retrieve(String question, RagOptions options) {
+    public RetrievalResult retrieve(String question, RagOptions options, KnowledgeFilter filter) {
         long start = System.nanoTime();
         RagTrace trace = new RagTrace();
         Map<String, Object> context = new HashMap<>();
         context.put(RagTrace.KEY, trace);
+        filter.putInto(context);
         List<Document> documents = this.pipelines.retrieve(question, options, context);
         return new RetrievalResult(options, documents.stream().map(SearchHit::from).toList(), trace.stages(),
                 (System.nanoTime() - start) / 1_000_000);
