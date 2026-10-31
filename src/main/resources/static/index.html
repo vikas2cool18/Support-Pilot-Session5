@@ -25,7 +25,7 @@
 <body>
 <main>
   <h1>SupportPilot</h1>
-  <p class="sub">Sessions 1–3 · Streaming chat and answers from the knowledge base</p>
+  <p class="sub">Sessions 1–4 · Streaming chat and grounded answers from the knowledge base</p>
   <div class="model" id="model">Active model: loading…</div>
 
   <textarea id="q">How do I reset my password?</textarea>
@@ -33,6 +33,7 @@
     <button id="stream">Stream answer</button>
     <button id="meta" class="secondary">Ask (with tokens &amp; latency)</button>
     <button id="docs" class="secondary">Ask the knowledge base (RAG)</button>
+    <button id="grounded" class="secondary">Grounded answer with citations</button>
   </div>
 
   <div class="card" id="answer">The answer appears here.</div>
@@ -78,6 +79,26 @@
       if (!res.ok) { answer.textContent = `${body.title}: ${body.detail}`; return; }
       answer.textContent = body.answer + '\n\nSources:\n' + body.sources
         .map(s => `  ${s.score.toFixed(2)}  ${s.source}${s.page ? ' p.' + s.page : ''}  ${s.section || ''}`).join('\n');
+      stats.innerHTML = `<span>Prompt tokens: <b>${body.promptTokens}</b></span>` +
+                        `<span>Latency: <b>${body.latencyMs} ms</b></span>`;
+    } catch (err) {
+      answer.textContent = 'Request failed: ' + err;
+    } finally { busy(false); }
+  };
+
+  // Session 4: the full pipeline - citations (verified from Checkpoint E) and a stage-by-stage trace.
+  $('grounded').onclick = async () => {
+    const q = $('q').value.trim(); if (!q) return;
+    answer.textContent = 'Searching and checking sources…'; stats.textContent = ''; busy(true);
+    try {
+      const res = await fetch('/answer?q=' + encodeURIComponent(q));
+      const body = await res.json();
+      if (!res.ok) { answer.textContent = `${body.title}: ${body.detail}`; return; }
+      const cites = body.citations.map(c => `  [${c.number}] ${c.verified ? 'OK' : 'UNVERIFIED'}  ${c.source}` +
+        `${c.page ? ' p.' + c.page : ''}${c.quote ? '\n        "' + c.quote + '"' : ''}`).join('\n');
+      const trace = body.trace.map(s => `  ${s.name.padEnd(9)} ${String(s.ms).padStart(6)} ms  ${s.detail}`).join('\n');
+      answer.textContent = body.answer + (body.answerable ? '' : '\n\n(not answerable from the knowledge base)') +
+        (cites ? '\n\nCitations:\n' + cites : '') + '\n\nPipeline:\n' + trace;
       stats.innerHTML = `<span>Prompt tokens: <b>${body.promptTokens}</b></span>` +
                         `<span>Latency: <b>${body.latencyMs} ms</b></span>`;
     } catch (err) {

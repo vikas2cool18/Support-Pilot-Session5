@@ -8,7 +8,7 @@ import org.springframework.ai.document.Document;
 public record SearchHit(double score, String source, String section, Object page, Object chunkIndex,
                         String preview) {
 
-    static SearchHit from(Document d) {
+    public static SearchHit from(Document d) {
         Map<String, Object> m = d.getMetadata();
         String text = (d.getText() == null) ? "" : d.getText().replaceAll("\\s+", " ").strip();
         double score = (d.getScore() == null) ? 0.0 : Math.round(d.getScore() * 1000) / 1000.0;
