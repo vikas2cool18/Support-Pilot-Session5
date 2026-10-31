@@ -1,4 +1,4 @@
-# SupportPilot — Sessions 1–4
+# SupportPilot — Sessions 1–5
 
 Code for *AI Engineering for Java Developers*.
 
@@ -161,6 +161,40 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local,rag-compare -Dspring-boot.r
 Latency: rewriting, expansion and re-ranking are extra model calls. Point them at a smaller model with
 `RAG_HELPER_MODEL` (e.g. `gpt-4.1-nano` with OpenAI, `claude-haiku-4-5` with Anthropic, or a small Ollama model).
 
+## 4e. Session 5: the evaluation suite and quality gate
+
+From Session 5 on, every change ends with **run the eval suite**. There are three kinds of tests:
+
+| Command | What runs | Needs |
+|---|---|---|
+| `mvn test` | Fast offline tests, including the golden-dataset checks | Nothing |
+| `mvn -Pdocker test` | Retrieval SQL (full-text, filters, hybrid) against PostgreSQL + pgvector in a container | Docker |
+| `mvn -Peval verify` | The evaluation suite: golden set through the real pipeline, LLM judge, quality gate | Docker + a model (API key or Ollama) |
+
+```bash
+mvn -Peval verify -Dspring.profiles.active=local -Deval.sample=8       # quick smoke run, local models
+mvn -Peval verify                                                      # full run, OpenAI
+mvn -Peval verify -Deval.judge-model=gpt-4.1                           # a stronger judge model
+mvn -Peval verify -Deval.judge=false                                   # deterministic checks only
+mvn -Peval verify -Deval.spring-evaluators=true -Deval.sample=5        # compare with Spring AI's evaluators
+mvn -Peval verify -Dsupportpilot.rag.rerank=false                      # does the gate catch a worse pipeline?
+```
+
+Reports are written to `target/eval/` (`eval-report.md`, `eval-results.csv`, `triage-report.md`).
+Thresholds live in `src/test/resources/eval/thresholds.properties`; override one per run with `-Deval.threshold.faithfulness=3.5`.
+The golden dataset is `src/test/resources/eval/golden-v1.csv` (25 cases: 15 simple, 5 multi-hop, 5 unanswerable).
+CI (`.github/workflows/ci.yml`) runs unit and container tests on every push, a 10-case evaluation on pull requests and the full set nightly; add `OPENAI_API_KEY` as a repository secret.
+
+| Tag | State |
+|---|---|
+| `s05-start` | Session 4 code + reference golden dataset `golden-v1.csv` |
+| `s05-cpA` | `GoldenCase`, CSV loader, tests for the dataset itself |
+| `s05-cpB` | `@EvalTest` with a Testcontainers database, `RagEval` with deterministic checks, `-Peval` profile |
+| `s05-cpC` | `LlmJudge` with a rubric (`judge-v1.st`), Spring AI `RelevancyEvaluator` / `FactCheckingEvaluator` |
+| `s05-cpD` | `EvalReport` (Markdown + CSV), `thresholds.properties`, triage accuracy in the gate |
+| `s05-cpE` | `PostgresRetrievalIT` (`-Pdocker`), GitHub Actions workflow |
+| `s05-end` | Judge calibration against human labels, homework template, more tests |
+
 ## 5. Tests (no API key, Ollama or database needed)
 
 ```bash
@@ -199,6 +233,9 @@ Add your 1–5 quality score in the last column, then summarise the three models
 | `/answer` returns `answerable: false` for a question the docs cover | Check `/retrieve` with `rerank=false`: if the chunk is there, the re-ranker dropped it — lower `supportpilot.rag.min-relevance`. |
 | Keyword search finds nothing | Re-ingest after upgrading (`POST /admin/ingest`); check the log line "Full-text index ready". Very common words alone don't match. |
 | Citations marked unverified | The model paraphrased its quote. Try a stronger chat model or keep `native-structured-output: true`. |
+| `Could not find a valid Docker environment` | Testcontainers needs Docker running (Docker Desktop, Rancher Desktop or Colima). |
+| Eval scores differ between runs | Expected with models. Use temperature 0, a fixed judge model, and compare averages over the whole set, not single cases. |
+| The eval suite is slow or costs too much | `-Deval.sample=8` for quick runs; `-Deval.judge=false` to skip the judge; full runs nightly. |
 | Port 8080 in use | `mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` |
 
 ## Optional: Maven wrapper

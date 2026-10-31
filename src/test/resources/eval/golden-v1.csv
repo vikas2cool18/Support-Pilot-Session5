@@ -1,0 +1,26 @@
+id,type,question,expected_answer,expected_sources,notes
+G01,simple,how long is the password reset link valid?,The reset link is valid for 30 minutes.,acme-cloud-user-guide.md|troubleshooting-guide.docx,
+G02,multi-hop,We have 40 users. Which plan do we need and what refund terms apply?,ENTERPRISE (PRO allows up to 25 users); ENTERPRISE refunds follow the signed order form.,plans-and-pricing.pdf|refund-policy.pdf,Needs two documents
+G03,unanswerable,How much does the on-premise edition of Acme Cloud cost?,Not in the knowledge base - the assistant should say it does not know.,none,No on-premise edition is documented
+G04,simple,"typed my password wrong a few times and now i'm locked out, how long do i wait??",The account is locked for 15 minutes after five failed attempts.,faq.md|acme-cloud-user-guide.md|troubleshooting-guide.docx,Chatty wording
+G05,simple,Is our company data stored in India?,"Yes - data for Indian accounts is stored only in India: Mumbai, with encrypted backups in Hyderabad.",security-and-data-residency.md,Session 1 homework question
+G06,multi-hop,"We're on PRO and our integration keeps getting ERR-4290. What is our limit and what can we do?","ERR-4290 means the rate limit was exceeded; PRO allows 600 requests per minute. Reduce the request rate, retry after Retry-After, or upgrade (ENTERPRISE: 3,000).",api-error-codes.md|plans-and-pricing.pdf|troubleshooting-guide.docx,Error code plus plan limit
+G07,unanswerable,What is the maximum size of a file I can attach to an invoice?,Not in the knowledge base - the assistant should say it does not know.,none,Plausible but not documented
+G08,simple,Which languages can the dashboard be shown in?,"English, Hindi, Tamil, Marathi and Bengali.",faq.md|acme-cloud-user-guide.md|release-notes.md,
+G09,simple,What does the PRO plan cost per user per month?,"INR 999 per user per month (exclusive of 18% GST), or INR 9,990 per user per year.",plans-and-pricing.pdf,
+G10,simple,How long do PRO customers have to ask for a refund?,Within 30 days of the first payment (monthly) or of the annual payment (annual).,refund-policy.pdf,
+G11,simple,i got charged twice for the same invoice. what now?,"Wait 5-7 working days for the bank to release the authorisation; if both charges remain, email billing with both transaction references. Duplicates are always refunded.",refund-policy.pdf|faq.md,
+G12,simple,Can I export my contacts to Excel?,"Yes - Contacts, select them, Export > Excel. Exports of more than 10,000 contacts are emailed.",acme-cloud-user-guide.md|faq.md,
+G13,simple,The dashboard shows Error 503. What should I do?,"Check status.acmecloud.example; if all is green, clear the cache and reload; contact support if it lasts more than 10 minutes.",troubleshooting-guide.docx|faq.md|api-error-codes.md,
+G14,simple,For how many days is an invitation to join our team valid?,Seven days.,acme-cloud-user-guide.md,
+G15,simple,What happens to the records a user created when I remove that user?,They are kept and reassigned to the account owner.,acme-cloud-user-guide.md,
+G16,simple,How long do you keep database backups?,Backups are taken every hour and kept for 35 days.,security-and-data-residency.md,
+G17,simple,When will API v1 be switched off?,On 31 March 2027.,api-error-codes.md|release-notes.md,
+G18,simple,Do NGOs get a discount?,Registered non-profits and educational institutions in India get 30% off PRO.,faq.md|plans-and-pricing.pdf,
+G19,simple,Which version added dark mode to the mobile app?,Version 3.3 (July 2026).,release-notes.md|faq.md|acme-cloud-user-guide.md,
+G20,multi-hop,We want scheduled reports delivered to Slack. Which plan do we need and since which version is Slack supported?,"Scheduled reports need PRO or ENTERPRISE; delivery to Slack was added in version 3.4.",plans-and-pricing.pdf|release-notes.md|acme-cloud-user-guide.md,
+G21,multi-hop,Our company needs single sign-on with Okta and our own encryption keys. Which plan fits?,"ENTERPRISE - it supports any SAML provider and bring-your-own-key (BYOK); PRO has only Google and Microsoft SSO and no BYOK.",plans-and-pricing.pdf|security-and-data-residency.md,
+G22,multi-hop,"If we close our account, how long until our data is gone from your backups as well?","Data is kept 30 days after closing, then deleted from live systems; it disappears from backups after the 35-day backup retention - so up to about 65 days.",security-and-data-residency.md|acme-cloud-user-guide.md,Combine two retention periods
+G23,unanswerable,What is the name of Acme Cloud's CEO?,Not in the knowledge base - the assistant should say it does not know.,none,
+G24,unanswerable,What is the phone number of your Bengaluru office?,Not in the knowledge base - the assistant should say it does not know.,none,
+G25,unanswerable,Will you sign a HIPAA business associate agreement with us?,"Not in the knowledge base (compliance covers DPDP and GDPR only) - the assistant should say it does not know.",none,Close to documented topics
