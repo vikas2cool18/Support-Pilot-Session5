@@ -19,7 +19,7 @@ class GroundedAssistantTest {
     private final SimpleVectorStore store = RagFixtures.store();
 
     private RagPipelineFactory pipeline(FakeChatModel helper) {
-        return RagFixtures.factory(this.store, "v1", helper, query -> List.<Document>of());
+        return RagFixtures.factory(this.store, "v2", helper, query -> List.<Document>of());
     }
 
     private static GroundedAnswer ask(GroundedAssistant assistant, String question, RagOptions options) {
@@ -28,38 +28,9 @@ class GroundedAssistantTest {
 
     /** The model's reply: plain text until Checkpoint D, a structured answer from Checkpoint E. */
     private static String reply(String answer) {
-        return answer;
+        return "{\"answer\": \"" + answer + "\", \"citations\": [], \"answerable\": true}";
     }
 
-    @Test
-    void numberedSourcesReachThePromptAndMarkersBecomeCitations() {
-        FakeChatModel model = new FakeChatModel("PRO customers have 30 days to ask for a refund [1].");
-        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(new FakeChatModel("unused")));
-
-        GroundedAnswer answer = ask(assistant, "How long do PRO customers have to ask for a refund?", RagOptions.naive(1));
-
-        String prompt = model.lastPrompt().getUserMessage().getText();
-        assertThat(prompt).contains("[1] refund-policy.pdf, page 1").contains("full refund within 30 days")
-                .doesNotContain("Dark mode");
-        assertThat(answer.sources()).extracting(SearchHit::source).containsExactly("refund-policy.pdf");
-        assertThat(answer.citations()).singleElement().satisfies(c -> {
-            assertThat(c.number()).isEqualTo(1);
-            assertThat(c.source()).isEqualTo("refund-policy.pdf");
-            assertThat(c.verified()).isTrue();
-        });
-        assertThat(answer.trace()).extracting(RagTrace.Stage::name).contains("vector", "top-n", "generate");
-    }
-
-    @Test
-    void citationOfASourceThatWasNotInThePromptIsNotVerified() {
-        FakeChatModel model = new FakeChatModel("Refunds are possible for 30 days [1] or 60 days [4].");
-        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(new FakeChatModel("unused")));
-
-        GroundedAnswer answer = ask(assistant, "How long do PRO customers have to ask for a refund?", RagOptions.naive(1));
-
-        assertThat(answer.citations()).extracting(CitedSource::number, CitedSource::verified)
-                .containsExactly(tuple(1, true), tuple(4, false));
-    }
 
     @Test
     void rewriteAndExpansionUseTheHelperModelAndAreTraced() {
@@ -91,5 +62,51 @@ class GroundedAssistantTest {
         assertThat(answer.sources()).extracting(SearchHit::source).containsExactly("release-notes.md");
     }
 
+
+    @Test
+    void structuredAnswerWithAnExactQuoteIsVerified() {
+        FakeChatModel model = new FakeChatModel("""
+                {"answer": "PRO customers have 30 days [1].",
+                 "citations": [{"source": 1, "quote": "PRO customers can get a full refund within 30 days of the annual payment."}],
+                 "answerable": true}""");
+        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(new FakeChatModel("unused")));
+
+        GroundedAnswer answer = ask(assistant, "How long do PRO customers have to ask for a refund?", RagOptions.naive(1));
+
+        assertThat(answer.answerable()).isTrue();
+        assertThat(model.lastPrompt().getUserMessage().getText()).contains("[1] refund-policy.pdf, page 1");
+        assertThat(answer.citations()).singleElement().satisfies(c -> {
+            assertThat(c.source()).isEqualTo("refund-policy.pdf");
+            assertThat(c.verified()).isTrue();
+        });
+    }
+
+    @Test
+    void paraphrasedQuoteIsNotVerified() {
+        FakeChatModel model = new FakeChatModel("""
+                {"answer": "You have a month [1].",
+                 "citations": [{"source": 1, "quote": "Customers on PRO have one month to request their money back."}],
+                 "answerable": true}""");
+        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(new FakeChatModel("unused")));
+
+        GroundedAnswer answer = ask(assistant, "How long do PRO customers have to ask for a refund?", RagOptions.naive(1));
+
+        assertThat(answer.citations()).singleElement().satisfies(c -> assertThat(c.verified()).isFalse());
+    }
+
+    @Test
+    void whenTheRerankerKeepsNothingTheModelSeesNoSourcesAndTheAnswerIsNotAnswerable() {
+        FakeChatModel helper = new FakeChatModel("{\"scores\": [{\"id\": 1, \"score\": 1}, {\"id\": 2, \"score\": 0}]}");
+        FakeChatModel model = new FakeChatModel("""
+                {"answer": "I don't know. Please contact Acme Cloud support.", "citations": [], "answerable": false}""");
+        GroundedAssistant assistant = RagFixtures.assistant(model, pipeline(helper));
+
+        GroundedAnswer answer = ask(assistant, "How much does the on-premise edition cost?", new RagOptions(false, 0, false, true, 5));
+
+        assertThat(answer.answerable()).isFalse();
+        assertThat(answer.sources()).isEmpty();
+        assertThat(answer.citations()).isEmpty();
+        assertThat(model.lastPrompt().getUserMessage().getText()).contains("No information was found");
+    }
 
 }

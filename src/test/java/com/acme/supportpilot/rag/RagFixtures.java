@@ -38,6 +38,7 @@ final class RagFixtures {
         // rewrite, expansions, hybrid, rerank, topN, candidates, [rrfK], [minRelevance], similarityThreshold
         return new RagSettings(false, 0, false, false, 1, 20,
                 60,
+                3,
                 0.0);
     }
 
@@ -48,13 +49,14 @@ final class RagFixtures {
 
     static RagPipelineFactory factory(SimpleVectorStore store, String promptVersion, FakeChatModel helper,
                                       DocumentRetriever keyword) {
-        return new RagPipelineFactory(store, settings(), prompts(promptVersion),
-                new RagHelperModel(ChatClient.builder(helper), ""), keyword);
+        RagHelperModel helperModel = new RagHelperModel(ChatClient.builder(helper), "");
+        return new RagPipelineFactory(store, settings(), prompts(promptVersion), helperModel, keyword,
+                new LlmReranker(helperModel, settings()));
     }
 
     static GroundedAssistant assistant(FakeChatModel model, RagPipelineFactory factory) {
         ByteArrayResource system = new ByteArrayResource("You are SupportPilot.".getBytes(StandardCharsets.UTF_8));
-        return new GroundedAssistant(ChatClient.builder(model), factory, system);
+        return new GroundedAssistant(ChatClient.builder(model), factory, system, false);
     }
 
 }

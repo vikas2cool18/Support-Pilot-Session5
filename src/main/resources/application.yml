@@ -101,7 +101,7 @@ supportpilot:
   rag:
     top-n: 5                  # chunks that finally go into the prompt
     candidates: 20            # chunks fetched per search before fusion and re-ranking narrow them down
-    prompt-version: v1
+    prompt-version: v2
     # Checkpoint B: query transformation. Helper calls use this model (empty = the chat model).
     helper-model: ${RAG_HELPER_MODEL:}
     rewrite: true
@@ -110,7 +110,10 @@ supportpilot:
     hybrid: true
     rrf-k: 60
     text-search-config: english
-    rerank: false
+    # Checkpoint E: re-ranking and verified citations
+    rerank: true
+    min-relevance: 3
+    native-structured-output: true
 
 ---
 spring:

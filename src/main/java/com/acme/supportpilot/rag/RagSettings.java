@@ -15,6 +15,8 @@ public class RagSettings {
 
     private final int rrfK;
 
+    private final int minRelevance;
+
     public RagSettings(@Value("${supportpilot.rag.rewrite:false}") boolean rewrite,
                        @Value("${supportpilot.rag.expansions:0}") int expansions,
                        @Value("${supportpilot.rag.hybrid:false}") boolean hybrid,
@@ -22,11 +24,13 @@ public class RagSettings {
                        @Value("${supportpilot.rag.top-n:5}") int topN,
                        @Value("${supportpilot.rag.candidates:20}") int candidates,
                        @Value("${supportpilot.rag.rrf-k:60}") int rrfK,
+                       @Value("${supportpilot.rag.min-relevance:3}") int minRelevance,
                        @Value("${supportpilot.knowledge.similarity-threshold:0.3}") double similarityThreshold) {
         this.defaults = new RagOptions(rewrite, expansions, hybrid, rerank, topN);
         this.candidates = candidates;
         this.similarityThreshold = similarityThreshold;
         this.rrfK = rrfK;
+        this.minRelevance = minRelevance;
     }
 
     /** The switches used when a request does not override them. */
@@ -47,6 +51,11 @@ public class RagSettings {
     /** The k constant of Reciprocal Rank Fusion; 60 is the value from the original paper. */
     public int rrfK() {
         return this.rrfK;
+    }
+
+    /** Candidates the re-ranker scores below this (0-10) are dropped. */
+    public int minRelevance() {
+        return this.minRelevance;
     }
 
 }

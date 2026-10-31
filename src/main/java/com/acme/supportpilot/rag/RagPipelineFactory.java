@@ -53,6 +53,8 @@ public class RagPipelineFactory {
 
     private final DocumentRetriever keywordRetriever;
 
+    private final LlmReranker reranker;
+
     /**
      * The advisor is built per request, so it must not create its own thread pool each time:
      * all pipelines share one executor (virtual threads, Java 21).
@@ -61,7 +63,8 @@ public class RagPipelineFactory {
 
     public RagPipelineFactory(VectorStore vectorStore, RagSettings settings, RagPrompts prompts,
                               RagHelperModel helper,
-                              @Qualifier("keywordRetriever") DocumentRetriever keywordRetriever) {
+                              @Qualifier("keywordRetriever") DocumentRetriever keywordRetriever,
+                              LlmReranker reranker) {
         this.vectorStore = vectorStore;
         this.settings = settings;
         this.augmenter = ContextualQueryAugmenter.builder()
@@ -76,6 +79,7 @@ public class RagPipelineFactory {
                 .targetSearchSystem("knowledge base of Acme Cloud product documentation")
                 .build();
         this.keywordRetriever = keywordRetriever;
+        this.reranker = reranker;
         this.executor.setVirtualThreads(true);
     }
 
@@ -105,6 +109,9 @@ public class RagPipelineFactory {
 
         // Post-retrieval
         List<DocumentPostProcessor> post = new ArrayList<>();
+        if (options.rerank()) {
+            post.add(Traced.postProcessor("rerank", (query, docs) -> this.reranker.rerank(query, docs, options.topN())));
+        }
         post.add(Traced.postProcessor("top-n", (query, docs) -> docs.stream().limit(options.topN()).toList()));
         return builder.documentPostProcessors(post).build();
     }
