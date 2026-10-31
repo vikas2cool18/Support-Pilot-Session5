@@ -30,4 +30,19 @@ final class EvalConfig {
         return Double.parseDouble(System.getProperty("eval.min-pass-rate", "0.8"));
     }
 
+    /** -Deval.judge=false skips the LLM judge (faster, cheaper, deterministic checks only). */
+    static boolean judge() {
+        return Boolean.parseBoolean(System.getProperty("eval.judge", "true"));
+    }
+
+    /** -Deval.judge-model=gpt-4.1 - ideally a different, stronger model than the one being judged. */
+    static String judgeModel() {
+        return System.getProperty("eval.judge-model", "");
+    }
+
+    /** -Deval.spring-evaluators=true also runs Spring AI's RelevancyEvaluator and FactCheckingEvaluator. */
+    static boolean springEvaluators() {
+        return Boolean.parseBoolean(System.getProperty("eval.spring-evaluators", "false"));
+    }
+
 }

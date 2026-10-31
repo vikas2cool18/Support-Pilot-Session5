@@ -11,10 +11,14 @@ public record CaseResult(
         GoldenCase goldenCase,
         GroundedAnswer answer,
         List<Check> checks,
+        JudgeScore judge,
+        Boolean springRelevancy,
+        Boolean springFactCheck,
         String error) {
 
     static CaseResult failed(GoldenCase c, Exception ex) {
         return new CaseResult(c, null, List.of(new Check("no-error", false, ex.getClass().getSimpleName() + ": " + ex.getMessage())),
+                null, null, null,
                 ex.getMessage());
     }
 
@@ -29,6 +33,12 @@ public record CaseResult(
 
     public boolean hasCheck(String name) {
         return this.checks.stream().anyMatch(c -> c.name().equals(name));
+    }
+
+    /** Average of the three judge scores, or NaN if the case was not judged. */
+    public double judgeMean() {
+        return (this.judge == null) ? Double.NaN
+                : (this.judge.faithfulness() + this.judge.relevance() + this.judge.correctness()) / 3.0;
     }
 
 }

@@ -13,6 +13,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.evaluation.FactCheckingEvaluator;
+import org.springframework.ai.chat.evaluation.RelevancyEvaluator;
+import org.springframework.ai.evaluation.EvaluationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.acme.supportpilot.knowledge.IngestionService;
@@ -21,6 +25,7 @@ import com.acme.supportpilot.rag.GroundedAssistant;
 import com.acme.supportpilot.rag.KnowledgeFilter;
 import com.acme.supportpilot.rag.RagRun;
 import com.acme.supportpilot.rag.RagSettings;
+import com.acme.supportpilot.rag.RagPrompts;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,12 +57,18 @@ class RagEval {
     @Autowired
     private IngestionService ingestion;
 
+    @Autowired
+    private ChatClient.Builder judgeBuilder;
+
     private final List<CaseResult> results = Collections.synchronizedList(new ArrayList<>());
+
+    private LlmJudge judge;
 
     @BeforeAll
     void setUp() throws IOException {
         // A fresh database in a container: load the knowledge base first.
         this.ingestion.ingestAll();
+        this.judge = LlmJudge.fromClasspath(this.judgeBuilder, EvalConfig.judgeModel());
     }
 
     static Stream<GoldenCase> cases() throws IOException {
@@ -71,7 +82,22 @@ class RagEval {
             RagRun run = this.assistant.run(c.question(), this.settings.defaults(), KnowledgeFilter.NONE);
             GroundedAnswer a = run.answer();
             List<Check> checks = DeterministicChecks.run(c, a);
-            this.results.add(new CaseResult(c, a, checks, null));
+
+            // Checkpoint C: the judge grades answerable cases; unanswerable ones are fully covered
+            // by the deterministic checks (refused, no citations).
+            JudgeScore score = null;
+            Boolean relevancy = null;
+            Boolean factCheck = null;
+            if (c.answerable() && EvalConfig.judge()) {
+                score = this.judge.judge(c.question(), c.expectedAnswer(), a.answer(), RagPrompts.numbered(run.context()));
+            }
+            if (c.answerable() && EvalConfig.springEvaluators()) {
+                // Spring AI's built-in evaluators: yes/no answers instead of a 1-5 rubric.
+                EvaluationRequest request = new EvaluationRequest(c.question(), run.context(), a.answer());
+                relevancy = new RelevancyEvaluator(this.judgeBuilder).evaluate(request).isPass();
+                factCheck = FactCheckingEvaluator.builder(this.judgeBuilder).build().evaluate(request).isPass();
+            }
+            this.results.add(new CaseResult(c, a, checks, score, relevancy, factCheck, null));
             log.info("{} -> {} | {}", c.id(), checks.stream().filter(x -> !x.passed()).map(Check::name).toList(),
                     a.answer().replaceAll("\\s+", " "));
         }
