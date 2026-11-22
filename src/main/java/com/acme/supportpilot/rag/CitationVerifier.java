@@ -39,22 +39,42 @@ public final class CitationVerifier {
         return result;
     }
 
+    /**
+     * The words of the quote must appear verbatim and in order in the chunk. Punctuation and
+     * formatting are ignored: models drop Markdown table pipes, list bullets and arrows, or turn
+     * "Admin | Manage users" into "Admin: Manage users" - same words, still a real quote. A quote
+     * shortened with an ellipsis is accepted when every part is verbatim and the parts appear in order.
+     */
     static boolean quoteAppearsIn(String quote, String text) {
-        String q = normalize(quote).replaceAll("[.\\s]+$", "");
-        return q.length() >= 8 && normalize(text).contains(q);
+        // Padded with spaces so only whole words match: "inr 99" must not match "inr 999".
+        String haystack = " " + normalize(text) + " ";
+        String[] parts = (quote == null) ? new String[0] : quote.split("\\.{3,}|…");
+        int from = 0;
+        int matched = 0;
+        for (String part : parts) {
+            String p = normalize(part);
+            if (p.isEmpty()) {
+                continue;
+            }
+            int at = haystack.indexOf(" " + p + " ", from);
+            if (at < 0) {
+                return false;
+            }
+            from = at + p.length() + 1;
+            matched += p.length();
+        }
+        return matched >= 8;
     }
 
+    /** Lower case, letters and digits only, single spaces: "**INR 999** / user" -> "inr 999 user". */
     static String normalize(String s) {
         if (s == null) {
             return "";
         }
         return Normalizer.normalize(s, Normalizer.Form.NFKC)
-                .replaceAll("[‘’]", "'")
-                .replaceAll("[“”]", "\"")
-                .replaceAll("[–—]", "-")
-                .replaceAll("\\*\\*|__|`", "")          // Markdown emphasis in the chunk text
-                .replaceAll("\\s+", " ")
                 .toLowerCase()
+                .replaceAll("['’‘]", "")                  // don't -> dont, so curly and straight apostrophes match
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
                 .strip();
     }
 
